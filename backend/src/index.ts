@@ -4,8 +4,9 @@ import express from "express";
 
 dotenv.config();
 
-import journalRoutes from "./routes/journals";
-import userRoutes from "./routes/users";
+import authRoutes from "./routes/auth";
+import eventRoutes from "./routes/events";
+import groupRoutes from "./routes/groups";
 
 const app = express();
 
@@ -15,8 +16,9 @@ app.use(cors({
 }));
 app.use(express.json());
 
-app.use("/api/journals", journalRoutes);
-app.use("/api/users", userRoutes);
+app.use("/api/auth", authRoutes);
+app.use("/api/events", eventRoutes);
+app.use("/api/groups", groupRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
