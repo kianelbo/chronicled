@@ -1,9 +1,5 @@
 import cors from "cors";
-import dotenv from "dotenv";
 import express from "express";
-
-dotenv.config();
-
 import authRoutes from "./routes/auth";
 import eventRoutes from "./routes/events";
 import groupRoutes from "./routes/groups";
