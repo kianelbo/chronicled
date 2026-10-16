@@ -92,7 +92,7 @@ async function hasPermission(userId: number, groupId: number, editorRequired = f
     .from(groupMembers)
     .where(and(eq(groupMembers.userId, userId), eq(groupMembers.groupId, groupId)))
     .limit(1);
-  return membership && (!editorRequired || membership.role === "editor" || membership.role === "owner");
+  return !!membership && (!editorRequired || membership.role === "editor" || membership.role === "owner");
 }
 
 // Get all events meeting the query

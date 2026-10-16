@@ -29,7 +29,7 @@ async function hasPermission(userId: number, groupId: number, minimumRole: Group
     .where(and(eq(groupMembers.userId, userId), eq(groupMembers.groupId, groupId)))
     .limit(1);
 
-  return membership && roleRank[membership.role] >= roleRank[minimumRole];
+  return !!membership && roleRank[membership.role] >= roleRank[minimumRole];
 }
 
 // Get all the groups in which the user is a member
@@ -51,9 +51,9 @@ router.get("/", async (req: AuthRequest, res: Response) => {
 // Creates a group with the user as a member
 router.post("/", async (req: AuthRequest, res: Response) => {
   try {
-    const name = req.body?.name.trim();
-    if (typeof name !== "string" || name.length > 100) {
-      return res.status(400).json({ error: "Name must be between 1 and 100 characters" });
+    const name = typeof req.body?.name === "string" ? req.body.name.trim() : "";
+    if (name < 1 || name.length > 32) {
+      return res.status(400).json({ error: "Name must be between 1 and 32 characters" });
     }
 
     const group = await db.transaction(async (tx) => {
@@ -69,6 +69,47 @@ router.post("/", async (req: AuthRequest, res: Response) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Failed to create group" });
+  }
+});
+
+// Rename a group (owners only)
+router.patch("/:groupId", async (req: AuthRequest, res: Response) => {
+  try {
+    const groupId = parseId(req.params.groupId);
+    if (groupId === null) return res.status(400).json({ error: "Invalid group id" });
+    // TODO: "owner" should not be hardcoded
+    if (!(await hasPermission(req.userId!, groupId, "owner"))) {
+      return res.status(403).json({ error: "Only owners can rename a group" });
+    }
+    const name = typeof req.body?.name === "string" ? req.body.name.trim() : "";
+    if (name.length < 1 || name.length > 32) {
+      return res.status(400).json({ error: "Name must be between 1 and 32 characters" });
+    }
+    const [group] = await db
+      .update(groups)
+      .set({ name })
+      .where(eq(groups.id, groupId))
+      .returning({ id: groups.id, name: groups.name, createdAt: groups.createdAt });
+    res.json({ group });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to rename group" });
+  }
+});
+
+// Delete a group (owners only). Members and events go with it (ON DELETE CASCADE).
+router.delete("/:groupId", async (req: AuthRequest, res: Response) => {
+  try {
+    const groupId = parseId(req.params.groupId);
+    if (groupId === null) return res.status(400).json({ error: "Invalid group id" });
+    if (!(await hasPermission(req.userId!, groupId, "owner"))) {
+      return res.status(403).json({ error: "Only owners can delete a group" });
+    }
+    await db.delete(groups).where(eq(groups.id, groupId));
+    res.status(204).send();
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to delete group" });
   }
 });
 
@@ -111,9 +152,9 @@ router.post("/:groupId/members", async (req: AuthRequest, res: Response) => {
       return res.status(403).json({ error: "You do not have permission to access this group" });
     }
 
-    const email = req.body?.email.trim().toLowerCase();
+    const email = typeof req.body?.email === "string" ? req.body?.email.trim().toLowerCase() : "";
     const role = parseRole(req.body?.role);
-    if (typeof email !== "string" || !emailRegex.test(email) || !role) {
+    if (!emailRegex.test(email) || !role) {
       return res.status(400).json({ error: "A valid email and member role are required" });
     }
 
