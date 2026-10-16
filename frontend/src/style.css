@@ -1,0 +1,200 @@
+@import "tailwindcss";
+@import "@fontsource-variable/chivo";
+@import "@fontsource-variable/chivo-mono";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ───────── Design tokens ─────────
+   Light: pale sea-chart paper with navy ink.
+   Dark: the same chart at night.
+   Two signal colours only: cobalt = release, crimson = incident. */
+:root {
+  --paper: #e8eeec;
+  --surface: #f4f8f7;
+  --raised: #ffffff;
+  --ink: #12263a;
+  --ink-soft: #3f5264;
+  --muted: #566674;
+  --line: #cad6d4;
+  --line-strong: #a9bab8;
+  --release: #2656d1;
+  --incident: #be2a50;
+  --weekend: rgba(18, 38, 58, 0.035);
+  --rule: 1.75rem; /* notebook line height */
+  --shadow: 0 1px 2px rgba(18, 38, 58, 0.08), 0 8px 24px -8px rgba(18, 38, 58, 0.18);
+  color-scheme: light;
+}
+.dark {
+  --paper: #0d1822;
+  --surface: #122230;
+  --raised: #1a2e3d;
+  --ink: #e6eef3;
+  --ink-soft: #b4c3ce;
+  --muted: #8fa2b1;
+  --line: #243a4b;
+  --line-strong: #37526a;
+  --release: #7aa2ff;
+  --incident: #ff7391;
+  --weekend: rgba(255, 255, 255, 0.025);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px -8px rgba(0, 0, 0, 0.6);
+  color-scheme: dark;
+}
+
+@theme inline {
+  --font-sans: "Chivo Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Chivo Mono Variable", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-raised: var(--raised);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-release: var(--release);
+  --color-incident: var(--incident);
+  --shadow-float: var(--shadow);
+}
+
+@layer base {
+  html {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    font-feature-settings: "tnum" 1;
+  }
+  body {
+    min-height: 100dvh;
+  }
+  :focus-visible {
+    outline: 2px solid var(--release);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+  ::selection {
+    background: color-mix(in srgb, var(--release) 28%, transparent);
+  }
+  button {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: not-allowed;
+  }
+}
+
+@utility btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 h-9 text-sm font-semibold
+      transition-colors select-none whitespace-nowrap disabled:opacity-45;
+  }
+@utility btn-primary {
+    @apply btn bg-ink text-paper hover:bg-ink-soft;
+  }
+@utility btn-secondary {
+    @apply btn border border-line-strong bg-raised text-ink hover:border-ink-soft;
+  }
+@utility btn-ghost {
+    @apply btn text-ink-soft hover:bg-ink/8 hover:text-ink;
+  }
+@utility btn-danger {
+    @apply btn bg-incident text-white hover:brightness-110;
+  }
+@utility btn-sm {
+    @apply h-8 px-2.5 text-[13px];
+  }
+@utility btn-icon {
+    @apply inline-flex items-center justify-center rounded-lg h-9 w-9 text-ink-soft hover:bg-ink/8 hover:text-ink transition-colors disabled:opacity-45;
+  }
+
+@utility field {
+    @apply block w-full h-10 rounded-lg border border-line-strong bg-raised px-3 text-sm text-ink
+      placeholder:text-muted/80 transition-colors hover:border-ink-soft focus:border-release focus:outline-none
+      focus:ring-2 focus:ring-release/25 disabled:opacity-60 disabled:bg-paper;
+  }
+textarea.field {
+    @apply h-auto py-2.5 leading-relaxed;
+  }
+@utility label {
+    @apply block text-[13px] font-semibold text-ink mb-1.5;
+  }
+@utility hint {
+    @apply text-xs text-muted mt-1.5;
+  }
+@utility error-text {
+    @apply text-[13px] text-incident mt-1.5;
+  }
+
+@utility panel {
+    @apply rounded-xl border border-line bg-surface;
+  }
+@utility chip {
+    @apply inline-flex items-center gap-1 rounded-md border border-line-strong/70 px-1.5 h-5 text-[11.5px] font-medium text-ink-soft;
+  }
+
+/* Notebook paper for the log view. Every vertical measure inside it is a
+   multiple of --rule so text sits on the ruled lines. */
+.notebook {
+  line-height: var(--rule);
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent calc(var(--rule) - 1px),
+    color-mix(in srgb, var(--line-strong) 45%, transparent) calc(var(--rule) - 1px),
+    color-mix(in srgb, var(--line-strong) 45%, transparent) var(--rule)
+  );
+}
+
+.scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+
+/* Entrances answer a navigation, never decorate. */
+@keyframes draw-in {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes sheet-in {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+@keyframes pop-in {
+  from {
+    transform: translateY(8px) scale(0.98);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
