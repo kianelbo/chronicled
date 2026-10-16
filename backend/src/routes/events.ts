@@ -1,11 +1,14 @@
 import { and, arrayContains, desc, eq, gte, isNull, lte, or } from "drizzle-orm";
 import { Router, Response } from "express";
 import { db } from "../db/client";
-import { events, groupMembers, users } from "../db/schema";
+import { events, eventTypeEnum, groupMembers, ROLE_EDITOR, TYPE_INCIDENT, TYPE_RELEASE, users } from "../db/schema";
 import { authenticate, AuthRequest } from "../middleware/auth";
+import { hasPermission, parseId } from "../services/roles";
 
 const router = Router();
 router.use(authenticate);
+
+type EventType = typeof eventTypeEnum.enumValues[number];
 
 const eventSelection = {
   id: events.id,
@@ -34,8 +37,7 @@ function parseEventFields(value: unknown, partial = false): Record<string, unkno
   const parsed: Record<string, unknown> = {};
 
   if (!partial || "type" in body) {
-    // TODO: types shouldn't be hardcoded
-    if (body.type !== "incident" && body.type !== "release") return "Invalid event type";
+    if (body.type !== TYPE_INCIDENT && body.type !== TYPE_RELEASE) return "Invalid event type";
     parsed.type = body.type;
   }
   if (!partial || "title" in body) {
@@ -81,20 +83,6 @@ function parseEventFields(value: unknown, partial = false): Record<string, unkno
   return parsed;
 }
 
-function parseGroupId(value: string): number | null {
-  const id = Number(value);
-  return Number.isSafeInteger(id) ? id : null;
-}
-
-async function hasPermission(userId: number, groupId: number, editorRequired = false): Promise<boolean> {
-  const [membership] = await db
-    .select({ role: groupMembers.role })
-    .from(groupMembers)
-    .where(and(eq(groupMembers.userId, userId), eq(groupMembers.groupId, groupId)))
-    .limit(1);
-  return !!membership && (!editorRequired || membership.role === "editor" || membership.role === "owner");
-}
-
 // Get all events meeting the query
 router.get("/", async (req: AuthRequest, res: Response) => {
   try {
@@ -108,14 +96,13 @@ router.get("/", async (req: AuthRequest, res: Response) => {
     }
 
     const type = req.query.type;
-    // TODO: types shouldn't be hardcoded
-    if (type !== undefined && type !== "incident" && type !== "release") {
+    if (type !== undefined && !eventTypeEnum.enumValues.includes(type as EventType)) {
       return res.status(400).json({ error: "Invalid event type" });
     }
     const tag = typeof req.query.tag === "string" ? req.query.tag.trim() : null;
     if (req.query.tag !== undefined && !tag) return res.status(400).json({ error: "Invalid tag" });
 
-    const groupId = req.query.groupId === undefined ? null : parseGroupId(req.query.groupId.toString());
+    const groupId = req.query.groupId === undefined ? null : parseId(req.query.groupId.toString());
     if (req.query.groupId !== undefined && groupId === null) {
       return res.status(400).json({ error: "Invalid group id" });
     }
@@ -127,7 +114,7 @@ router.get("/", async (req: AuthRequest, res: Response) => {
       groupId !== null ? eq(events.groupId, groupId) : undefined,
       from ? or(isNull(events.endTime), gte(events.endTime, from)) : undefined,
       to ? lte(events.startTime, to) : undefined,
-      type ? eq(events.type, type) : undefined,
+      type ? eq(events.type, type as EventType) : undefined,
       tag ? arrayContains(events.tags, [tag]) : undefined,
     ];
     const result = await db
@@ -173,8 +160,7 @@ router.post("/", async (req: AuthRequest, res: Response) => {
     const parsed = parseEventFields(req.body);
     if (typeof parsed === "string") return res.status(400).json({ error: parsed });
     const data = parsed as {
-      // TODO: types shouldn't be hardcoded
-      type: "incident" | "release";
+      type: EventType;
       title: string;
       description: string | null;
       startTime: Date;
@@ -185,7 +171,7 @@ router.post("/", async (req: AuthRequest, res: Response) => {
     if (data.endTime && data.endTime < data.startTime) {
       return res.status(400).json({ error: "endTime must be greater than or equal to startTime" });
     }
-    if (!(await hasPermission(req.userId!, data.groupId, true))) {
+    if (!(await hasPermission(req.userId!, data.groupId, ROLE_EDITOR))) {
       return res.status(403).json({ error: "You do not have permission to create events in this group" });
     }
 
@@ -213,7 +199,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response) => {
 
     const [existing] = await db.select().from(events).where(eq(events.id, id)).limit(1);
     if (!existing) return res.status(404).json({ error: "Event not found" });
-    if (!(await hasPermission(req.userId!, existing.groupId, true))) {
+    if (!(await hasPermission(req.userId!, existing.groupId, ROLE_EDITOR))) {
       return res.status(403).json({ error: "You do not have permission to update this event" });
     }
 
@@ -247,7 +233,7 @@ router.delete("/:id", async (req: AuthRequest, res: Response) => {
 
     const [existing] = await db.select().from(events).where(eq(events.id, id)).limit(1);
     if (!existing) return res.status(404).json({ error: "Event not found" });
-    if (!(await hasPermission(req.userId!, existing.groupId, true))) {
+    if (!(await hasPermission(req.userId!, existing.groupId, ROLE_EDITOR))) {
       return res.status(403).json({ error: "You do not have permission to delete this event" });
     }
 

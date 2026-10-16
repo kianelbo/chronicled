@@ -2,7 +2,12 @@ import { relations, sql } from "drizzle-orm";
 import * as p from "drizzle-orm/pg-core";
 
 export const eventTypeEnum = p.pgEnum("event_type", ["incident", "release"]);
+export const TYPE_INCIDENT = eventTypeEnum.enumValues[0];
+export const TYPE_RELEASE = eventTypeEnum.enumValues[1];
 export const groupRoleEnum = p.pgEnum("group_role", ["viewer", "editor", "owner"]);
+export const ROLE_VIEWER = groupRoleEnum.enumValues[0];
+export const ROLE_EDITOR = groupRoleEnum.enumValues[1];
+export const ROLE_OWNER = groupRoleEnum.enumValues[2];
 
 export const users = p.pgTable("users", {
     id: p.integer().primaryKey().generatedAlwaysAsIdentity(),
@@ -23,7 +28,7 @@ export const groups = p.pgTable("groups", {
 export const groupMembers = p.pgTable("group_members", {
   groupId: p.integer("group_id").notNull().references(() => groups.id, { onDelete: "cascade" }),
   userId: p.integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-    role: groupRoleEnum("role").notNull().default("viewer"),
+    role: groupRoleEnum("role").notNull().default(ROLE_VIEWER),
     createdAt: p.timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [

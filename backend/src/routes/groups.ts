@@ -1,36 +1,14 @@
 import { and, asc, count, eq } from "drizzle-orm";
 import { Response, Router } from "express";
 import { db } from "../db/client";
-import { groupMembers, groupRoleEnum, groups, users } from "../db/schema";
+import { groupMembers, groups, ROLE_OWNER, ROLE_VIEWER, users } from "../db/schema";
 import { authenticate, AuthRequest } from "../middleware/auth";
+import { hasPermission, parseId, parseRole } from "../services/roles";
 
 const router = Router();
 router.use(authenticate);
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-const roles = groupRoleEnum.enumValues;
-type GroupRole = (typeof roles)[number];
-const roleRank: Record<GroupRole, number> = { viewer: 1, editor: 2, owner: 3 };
-
-function parseId(value: string): number | null {
-  const id = Number(value);
-  return Number.isSafeInteger(id) && id > 0 ? id : null;
-}
-
-function parseRole(value: unknown): GroupRole | null {
-  return typeof value === "string" && roles.includes(value as GroupRole) ? (value as GroupRole) : null;
-}
-
-async function hasPermission(userId: number, groupId: number, minimumRole: GroupRole): Promise<boolean> {
-  const [membership] = await db
-    .select({ role: groupMembers.role })
-    .from(groupMembers)
-    .where(and(eq(groupMembers.userId, userId), eq(groupMembers.groupId, groupId)))
-    .limit(1);
-
-  return !!membership && roleRank[membership.role] >= roleRank[minimumRole];
-}
 
 // Get all the groups in which the user is a member
 router.get("/", async (req: AuthRequest, res: Response) => {
@@ -77,8 +55,7 @@ router.patch("/:groupId", async (req: AuthRequest, res: Response) => {
   try {
     const groupId = parseId(req.params.groupId);
     if (groupId === null) return res.status(400).json({ error: "Invalid group id" });
-    // TODO: "owner" should not be hardcoded
-    if (!(await hasPermission(req.userId!, groupId, "owner"))) {
+    if (!(await hasPermission(req.userId!, groupId, ROLE_OWNER))) {
       return res.status(403).json({ error: "Only owners can rename a group" });
     }
     const name = typeof req.body?.name === "string" ? req.body.name.trim() : "";
@@ -102,7 +79,7 @@ router.delete("/:groupId", async (req: AuthRequest, res: Response) => {
   try {
     const groupId = parseId(req.params.groupId);
     if (groupId === null) return res.status(400).json({ error: "Invalid group id" });
-    if (!(await hasPermission(req.userId!, groupId, "owner"))) {
+    if (!(await hasPermission(req.userId!, groupId, ROLE_OWNER))) {
       return res.status(403).json({ error: "Only owners can delete a group" });
     }
     await db.delete(groups).where(eq(groups.id, groupId));
@@ -118,8 +95,7 @@ router.get("/:groupId/members", async (req: AuthRequest, res: Response) => {
   try {
     const groupId = parseId(req.params.groupId);
     if (groupId === null) return res.status(400).json({ error: "Invalid group id" });
-    // TODO: "viewer" should not be hardcoded
-    if (!(await hasPermission(req.userId!, groupId, "viewer"))) {
+    if (!(await hasPermission(req.userId!, groupId, ROLE_VIEWER))) {
       return res.status(403).json({ error: "You do not have permission to access this group" });
     }
 
@@ -147,8 +123,7 @@ router.post("/:groupId/members", async (req: AuthRequest, res: Response) => {
   try {
     const groupId = parseId(req.params.groupId);
     if (groupId === null) return res.status(400).json({ error: "Invalid group id" });
-    // TODO: "owner" should not be hardcoded
-    if (!(await hasPermission(req.userId!, groupId, "owner"))) {
+    if (!(await hasPermission(req.userId!, groupId, ROLE_OWNER))) {
       return res.status(403).json({ error: "You do not have permission to access this group" });
     }
 
@@ -197,16 +172,15 @@ router.patch("/:groupId/members/:userId", async (req: AuthRequest, res: Response
     }
     const role = parseRole(req.body?.role);
     if (!role) return res.status(400).json({ error: "Invalid member role" });
-    // TODO: "owner" should not be hardcoded
-    if (!(await hasPermission(currentUserId, groupId, "owner"))) {
+    if (!(await hasPermission(currentUserId, groupId, ROLE_OWNER))) {
       return res.status(403).json({ error: "You do not have permission to access this group" });
     }
 
-    if (userId === currentUserId && role !== "owner") {
+    if (userId === currentUserId && role !== ROLE_OWNER) {
       const [ownerCount] = await db
         .select({ count: count() })
         .from(groupMembers)
-        .where(and(eq(groupMembers.groupId, groupId), eq(groupMembers.role, "owner")));
+        .where(and(eq(groupMembers.groupId, groupId), eq(groupMembers.role, ROLE_OWNER)));
       if (ownerCount.count <= 1) {
         return res.status(400).json({ error: "The last owner cannot demote themselves" });
       }
@@ -234,8 +208,7 @@ router.delete("/:groupId/members/:userId", async (req: AuthRequest, res: Respons
     if (groupId === null || userId === null) {
       return res.status(400).json({ error: "Invalid group or user id" });
     }
-    // TODO: "owner" should not be hardcoded
-    if (!(await hasPermission(currentUserId, groupId, "owner"))) {
+    if (!(await hasPermission(currentUserId, groupId, ROLE_OWNER))) {
       return res.status(403).json({ error: "You do not have permission to access this group" });
     }
     if (userId === currentUserId) {
