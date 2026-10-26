@@ -1,8 +1,15 @@
+<script lang="ts">
+let hasRevealedChart = false;
+</script>
+
 <script setup lang="ts">
 import { APP_NAME } from "@/config";
 import BrandMark from "./BrandMark.vue";
 
 defineProps<{ title: string; subtitle: string }>();
+
+const revealChart = !hasRevealedChart;
+hasRevealedChart = true;
 </script>
 
 <template>
@@ -19,10 +26,10 @@ defineProps<{ title: string; subtitle: string }>();
           Every release and incident, in order.
         </h2>
         <p class="mt-4 max-w-sm text-base leading-7 text-ink-soft">
-          See what shipped before things broke, and what you did about it.
+          See what happened and when it happened.
         </p>
 
-        <div class="reveal mt-10 max-w-[34rem]">
+        <div :class="[revealChart && 'reveal', 'mt-10 max-w-[34rem]']">
           <svg viewBox="0 0 520 250" class="w-full" role="img" aria-label="Example timeline with releases and incidents across three groups">
             <g font-size="11" font-weight="600" fill="var(--muted)">
               <text x="0" y="52">Payments</text>
