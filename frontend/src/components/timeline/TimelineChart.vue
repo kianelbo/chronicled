@@ -766,7 +766,7 @@ const aria = (e: TimedEvent) =>
     <footer class="flex flex-wrap items-center gap-x-5 gap-y-1.5 border-t border-line px-3 py-2 text-xs text-muted">
       <span class="flex items-center gap-1.5"><svg width="12" height="12" viewBox="0 0 16 16"><path d="M8 1.5L14.5 8 8 14.5 1.5 8z" style="fill: var(--release)" /></svg> Release</span>
       <span class="flex items-center gap-1.5"><svg width="12" height="12" viewBox="0 0 16 16"><path d="M8 2L14.5 13.5h-13z" style="fill: var(--incident)" /></svg> Incident</span>
-      <span class="flex items-center gap-1.5"><span class="h-2.5 w-5 rounded-[3px] border-[1.5px] border-ink-soft bg-ink/10" /> Has an end time</span>
+      <span class="flex items-center gap-1.5"><span class="h-2.5 w-5 rounded-[3px] border-[1.5px] border-ink-soft bg-ink/10" /> Time window</span>
       <span class="ml-auto"><span class="font-semibold text-ink-soft">{{ inViewCount }}</span> of {{ events.length }} in view</span>
       <span class="hidden w-full sm:inline sm:w-auto">Drag to pan · Ctrl/⌘ + scroll or pinch to zoom<template v-if="canCreate"> · Double-click to add an event</template></span>
     </footer>

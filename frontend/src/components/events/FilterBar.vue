@@ -128,9 +128,9 @@ const active = "!border-ink !bg-ink/6";
         </button>
         <div class="mt-1 border-t border-line px-2.5 pb-2 pt-2.5">
           <p class="mb-2 text-xs font-semibold text-muted">Custom range</p>
-          <div class="flex items-center gap-2">
-            <input v-model="fromInput" type="date" class="field !h-8 !px-2 text-[13px]" aria-label="From date" />
-            <input v-model="toInput" type="date" class="field !h-8 !px-2 text-[13px]" aria-label="To date" />
+          <div class="grid grid-cols-2 gap-2">
+            <input v-model="fromInput" type="date" class="field !h-8 !min-w-0 !px-2 text-[13px]" aria-label="From date" />
+            <input v-model="toInput" type="date" class="field !h-8 !min-w-0 !px-2 text-[13px]" aria-label="To date" />
           </div>
         </div>
       </template>
