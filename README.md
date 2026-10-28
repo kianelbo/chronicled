@@ -7,24 +7,44 @@ the timeline of events.
 
 You need Node 24+ and a PostgreSQL database.
 
-**Backend** (port 5000)
+Create an env file in the repository root:
+```bash
+cp .env.example .env
+```
+Set `DATABASE_URL` to your PostgreSQL connection string and replace `JWT_SECRET` with a long secure value. Write `.env` values without surrounding quotes, especially when passing the file to Docker with `--env-file`. The backend loads this root `.env`; the frontend needs no separate environment file.
+
+**Development** — run each command group in its own terminal:
+
+backend (port 5000):
 ```bash
 cd backend
-cp env.sample .env        # set DATABASE_URL and JWT_SECRET
-npm install
-npx drizzle-kit push      # create the tables (for the first time)
+npm ci
+npx drizzle-kit push   # create/update the tables
 npm run dev
 ```
 
-**Frontend** (port 5173)
+frontend (port 5173):
 ```bash
 cd frontend
-cp env.sample .env        # VITE_API_URL defaults to http://localhost:5000/api
-npm install
+npm ci
 npm run dev
 ```
 
-Open http://localhost:5173 and register. The backend's CORS only allows that origin, so keep the dev server on port 5173.
+Open http://localhost:5173. The frontend sends API requests to same-origin `/api`, and Vite proxies them to the backend during development. Production serves the frontend and API from the same origin as well, so no frontend API URL configuration is needed.
+
+## Deployment
+
+The production backend serves the compiled frontend and API from one process and one origin. Ensure the PostgreSQL database is reachable and its schema is up to date (the development setup's `npx drizzle-kit push` command can create/update the tables). Then build and run the combined Docker image from the repository root:
+
+```bash
+cp .env.example .env                 # set production DATABASE_URL and a unique JWT_SECRET
+docker build -t chronicled .
+docker run --env-file .env -p 5000:5000 chronicled
+```
+
+The image contains both the backend and frontend; PostgreSQL remains an external service configured through `DATABASE_URL`. Docker passes the variables from `.env` directly to the container at runtime; the app does not need an `.env` file inside the image. Set `CORS_ORIGINS` only when browser clients on other origins need API access.
+
+When running PostgreSQL locally rather than on a public database host or in a Docker network, use `host.docker.internal` as the database hostname in the connection string (for example, `postgres://user:password@host.docker.internal:5432/chronicled`).
 
 ## Concepts
 
@@ -55,5 +75,5 @@ All routes are under `/api` and, except register and login, need `Authorization:
 * Frontend: [Vue3](https://vuejs.org/)
 * CSS: [Tailwind](https://tailwindcss.com/)
 * Backend: [Express](https://expressjs.com/)
-* DB: Postgres via [Supabase](https://supabase.com/)
+* DB: [Postgres](https://www.postgresql.org/)
 * ORM: [Drizzle](https://orm.drizzle.team/)

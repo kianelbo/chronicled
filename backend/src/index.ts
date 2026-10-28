@@ -1,20 +1,16 @@
-import cors from "cors";
-import express from "express";
-import authRoutes from "./routes/auth";
-import eventRoutes from "./routes/events";
-import groupRoutes from "./routes/groups";
+import dotenv from "dotenv";
+import path from "node:path";
 
-const app = express();
+dotenv.config({ path: path.resolve(process.cwd(), "../.env") });
 
-app.use(cors({
-  origin: 'http://localhost:5173',
-  credentials: true
-}));
-app.use(express.json());
+async function start() {
+  const { createApp } = await import("./app.js");
+  const PORT = process.env.PORT || 5000;
 
-app.use("/api/auth", authRoutes);
-app.use("/api/events", eventRoutes);
-app.use("/api/groups", groupRoutes);
+  createApp().listen(PORT, () => console.log(`Chronicled server running on port ${PORT}`));
+}
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Chronicled server running on port ${PORT}`));
+start().catch((error: unknown) => {
+  console.error("Failed to start Chronicled server:", error);
+  process.exitCode = 1;
+});

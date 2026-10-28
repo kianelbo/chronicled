@@ -29,7 +29,7 @@ describe("HTTP client", () => {
     })).resolves.toEqual({ value: 1 });
 
     const [url, options] = fetchMock.mock.calls[0];
-    expect(String(url)).toContain("/api/events?group=7");
+    expect(String(url)).toBe(new URL("/api/events?group=7", window.location.origin).toString());
     expect(options).toMatchObject({
       method: "POST",
       headers: { Authorization: "Bearer session-token", "Content-Type": "application/json" },
