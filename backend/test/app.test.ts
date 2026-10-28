@@ -3,7 +3,7 @@ import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import type { AddressInfo } from "node:net";
-import { createApp } from "../src/app.js";
+import { createApp } from "../src/index.js";
 
 describe("production app hosting", () => {
   const originalNodeEnv = process.env.NODE_ENV;
