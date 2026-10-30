@@ -1,13 +1,11 @@
+import "./config";
 import cors from "cors";
-import dotenv from "dotenv";
 import express from "express";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import authRoutes from "./routes/auth";
 import eventRoutes from "./routes/events";
 import groupRoutes from "./routes/groups";
-
-dotenv.config({ path: path.resolve(process.cwd(), "../.env") });
 
 export function createApp(frontendDistDir = process.env.FRONTEND_DIST_DIR ?? path.resolve(process.cwd(), "../frontend/dist")) {
   const app = express();
@@ -41,6 +39,10 @@ export function createApp(frontendDistDir = process.env.FRONTEND_DIST_DIR ?? pat
 
 async function start() {
   const PORT = process.env.PORT || 5000;
+
+  if (!process.env.DATABASE_URL) {
+    throw new Error("DATABASE_URL must be set before starting the backend");
+  }
 
   createApp().listen(PORT, () => console.log(`Chronicled server running on port ${PORT}`));
 }
